@@ -1,6 +1,8 @@
 package models
 
 import (
+	"orm/app/helper"
+
 	"gorm.io/gorm"
 )
 
@@ -17,4 +19,14 @@ type OfficeResponse struct {
 	Address   string `json:"address"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
+}
+
+// MakeResponse of Office.
+func (office Office) MakeResponse() OfficeResponse {
+	return OfficeResponse{
+		Name:      office.Name,
+		Address:   office.Address,
+		CreatedAt: office.CreatedAt.Format(helper.YMDHIS),
+		UpdatedAt: office.UpdatedAt.Format(helper.YMDHIS),
+	}
 }

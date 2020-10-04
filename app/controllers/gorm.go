@@ -2,7 +2,7 @@ package controllers
 
 import "gorm.io/gorm"
 
-// StrDB struct.
-type StrDB struct {
+// DB struct.
+type DB struct {
 	DB *gorm.DB
 }

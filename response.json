@@ -1,0 +1,20 @@
+{
+    "status": "[success/error]",
+    "data": [
+        {
+            "id": 1,
+            "full_name": "Hendra",
+            "office": {
+                "id": 1,
+                "name": "The Park Solo Baru"
+            },
+            "to_dos": [
+                {
+                    "id": 1,
+                    "name": "Mengganti layout"
+                }
+            ]
+        }
+    ],
+    "message": "The message object for error only"
+}

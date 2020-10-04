@@ -1,15 +1,17 @@
 package controllers
 
+/*
 import (
 	"fmt"
 	"net/http"
+	"orm/app/helper"
 	"orm/app/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 // CreateUser controller.
-func (strDB *StrDB) CreateUser(c *gin.Context) {
+func (controller *Controller) CreateUser(c *gin.Context) {
 	var (
 		user   models.User
 		result gin.H
@@ -20,15 +22,29 @@ func (strDB *StrDB) CreateUser(c *gin.Context) {
 		fmt.Println("tidak ada data")
 	}
 
-	strDB.DB.Create(&user)
-	result = responseAPI(user, 1)
+	hashed, err := helper.HashPassword(user.Password)
+	if err != nil {
+		result = gin.H{
+			"status":  "error",
+			"message": err.Error,
+		}
+		c.JSON(http.StatusInternalServerError, result)
+		c.Abort()
+	}
+
+	user.Password = hashed
+
+	controller.DB.DB.Create(&user)
+	controller.DB.DB.Joins("Office").First(&user, user.ID)
+
+	result = responseAPI(user, "")
 
 	c.JSON(http.StatusOK, result)
 
 }
 
 // DeleteUser controller.
-func (strDB *StrDB) DeleteUser(c *gin.Context) {
+func (controller *Controller) DeleteUser(c *gin.Context) {
 	var (
 		user       models.User
 		result     gin.H
@@ -36,7 +52,7 @@ func (strDB *StrDB) DeleteUser(c *gin.Context) {
 	)
 
 	id := c.Param("id")
-	err := strDB.DB.First(&user, id).Error
+	err := controller.DB.DB.First(&user, id).Error
 	resultCode = http.StatusOK
 	result = gin.H{
 		"ok":      true,
@@ -50,7 +66,7 @@ func (strDB *StrDB) DeleteUser(c *gin.Context) {
 		resultCode = http.StatusNotFound
 	}
 
-	errDelete := strDB.DB.Delete(&user, id).Error
+	errDelete := controller.DB.DB.Delete(&user, id).Error
 	if errDelete != nil {
 		result = gin.H{
 			"ok":      false,
@@ -63,7 +79,7 @@ func (strDB *StrDB) DeleteUser(c *gin.Context) {
 }
 
 // UpdateUser controller.
-func (strDB StrDB) UpdateUser(c *gin.Context) {
+func (controller *Controller) UpdateUser(c *gin.Context) {
 
 	var (
 		user       models.User
@@ -79,7 +95,7 @@ func (strDB StrDB) UpdateUser(c *gin.Context) {
 
 	id := c.Param("id")
 	err := c.Bind(&newUser)
-	err = strDB.DB.First(&user, id).Error
+	err = controller.DB.DB.First(&user, id).Error
 	if err != nil {
 		result = gin.H{
 			"ok":      false,
@@ -89,7 +105,7 @@ func (strDB StrDB) UpdateUser(c *gin.Context) {
 	}
 
 	if resultCode != http.StatusNotFound {
-		errUpdate := strDB.DB.Model(&user).Updates(newUser).Error
+		errUpdate := controller.DB.DB.Model(&user).Updates(newUser).Error
 		if errUpdate != nil {
 			result = gin.H{
 				"ok":      false,
@@ -103,13 +119,13 @@ func (strDB StrDB) UpdateUser(c *gin.Context) {
 }
 
 // GetUser controllers.
-func (strDB *StrDB) GetUser(c *gin.Context) {
+func (controller *Controller) GetUser(c *gin.Context) {
 	var (
 		user   []models.User
 		result gin.H
 	)
 
-	strDB.DB.Find(&user)
+	controller.DB.DB.Find(&user)
 
 	if len(user) <= 0 {
 		arrayNil := []models.User{}
@@ -120,14 +136,14 @@ func (strDB *StrDB) GetUser(c *gin.Context) {
 	}
 
 	if len(user) > 0 {
-		result = responseAPI(user, len(user))
+		result = responseAPI(user, "")
 	}
 
 	c.JSON(http.StatusOK, result)
 }
 
 // GetOneUser controllers.
-func (strDB *StrDB) GetOneUser(c *gin.Context) {
+func (controller *Controller) GetOneUser(c *gin.Context) {
 	var (
 		user       models.User
 		resultCode = http.StatusOK
@@ -135,7 +151,7 @@ func (strDB *StrDB) GetOneUser(c *gin.Context) {
 	)
 
 	id := c.Param("id")
-	err := strDB.DB.First(&user, id).Error
+	err := controller.DB.DB.First(&user, id).Error
 	if err != nil {
 		resultCode = http.StatusNotFound
 		result = gin.H{
@@ -145,7 +161,7 @@ func (strDB *StrDB) GetOneUser(c *gin.Context) {
 	}
 
 	if resultCode == http.StatusOK {
-		result = responseAPI(user, 1)
+		result = responseAPI(user, "")
 	}
 
 	c.JSON(resultCode, result)
@@ -153,7 +169,7 @@ func (strDB *StrDB) GetOneUser(c *gin.Context) {
 }
 
 // GetSearchUser controllers.
-func (strDB *StrDB) GetSearchUser(c *gin.Context) {
+func (controller *Controller) GetSearchUser(c *gin.Context) {
 	var (
 		user       []models.User
 		resultCode = http.StatusOK
@@ -161,7 +177,7 @@ func (strDB *StrDB) GetSearchUser(c *gin.Context) {
 	)
 
 	search := c.Query("search")
-	strDBQuery := strDB.DB
+	strDBQuery := controller.DB.DB
 
 	if search == "" {
 		resultCode = http.StatusBadRequest
@@ -183,9 +199,10 @@ func (strDB *StrDB) GetSearchUser(c *gin.Context) {
 	}
 
 	if resultCode == http.StatusOK {
-		result = responseAPI(user, len(user))
+		result = responseAPI(user, "")
 	}
 
 	c.JSON(resultCode, result)
 
 }
+*/

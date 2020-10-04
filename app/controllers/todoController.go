@@ -1,5 +1,6 @@
 package controllers
 
+/*
 import (
 	"fmt"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 )
 
 // CreateToDo controller.
-func (strDB *StrDB) CreateToDo(c *gin.Context) {
+func (controller *Controller) CreateToDo(c *gin.Context) {
 	var (
 		todo   models.ToDo
 		result gin.H
@@ -20,15 +21,15 @@ func (strDB *StrDB) CreateToDo(c *gin.Context) {
 		fmt.Println("tidak ada data")
 	}
 
-	strDB.DB.Create(&todo)
-	result = responseAPI(todo, 1)
+	controller.DB.DB.Create(&todo)
+	result = responseAPI(todo, "")
 
 	c.JSON(http.StatusOK, result)
 
 }
 
 // DeleteToDo controller.
-func (strDB *StrDB) DeleteToDo(c *gin.Context) {
+func (controller *Controller) DeleteToDo(c *gin.Context) {
 	var (
 		todo       models.ToDo
 		result     gin.H
@@ -36,7 +37,7 @@ func (strDB *StrDB) DeleteToDo(c *gin.Context) {
 	)
 
 	id := c.Param("id")
-	err := strDB.DB.First(&todo, id).Error
+	err := controller.DB.DB.First(&todo, id).Error
 	resultCode = http.StatusOK
 	result = gin.H{
 		"ok":      true,
@@ -50,7 +51,7 @@ func (strDB *StrDB) DeleteToDo(c *gin.Context) {
 		resultCode = http.StatusNotFound
 	}
 
-	errDelete := strDB.DB.Delete(&todo, id).Error
+	errDelete := controller.DB.DB.Delete(&todo, id).Error
 	if errDelete != nil {
 		result = gin.H{
 			"ok":      false,
@@ -63,7 +64,7 @@ func (strDB *StrDB) DeleteToDo(c *gin.Context) {
 }
 
 // UpdateToDo controller.
-func (strDB StrDB) UpdateToDo(c *gin.Context) {
+func (controller *Controller) UpdateToDo(c *gin.Context) {
 
 	var (
 		todo       models.ToDo
@@ -79,7 +80,7 @@ func (strDB StrDB) UpdateToDo(c *gin.Context) {
 
 	id := c.Param("id")
 	err := c.Bind(&newToDo)
-	err = strDB.DB.First(&todo, id).Error
+	err = controller.DB.DB.First(&todo, id).Error
 	if err != nil {
 		result = gin.H{
 			"ok":      false,
@@ -89,7 +90,7 @@ func (strDB StrDB) UpdateToDo(c *gin.Context) {
 	}
 
 	if resultCode != http.StatusNotFound {
-		errUpdate := strDB.DB.Model(&todo).Updates(newToDo).Error
+		errUpdate := controller.DB.DB.Model(&todo).Updates(newToDo).Error
 		if errUpdate != nil {
 			result = gin.H{
 				"ok":      false,
@@ -103,13 +104,13 @@ func (strDB StrDB) UpdateToDo(c *gin.Context) {
 }
 
 // GetToDo controllers.
-func (strDB *StrDB) GetToDo(c *gin.Context) {
+func (controller *Controller) GetToDo(c *gin.Context) {
 	var (
 		todo   []models.ToDo
 		result gin.H
 	)
 
-	strDB.DB.Find(&todo)
+	controller.DB.DB.Find(&todo)
 
 	if len(todo) <= 0 {
 		arrayNil := []models.ToDo{}
@@ -120,14 +121,14 @@ func (strDB *StrDB) GetToDo(c *gin.Context) {
 	}
 
 	if len(todo) > 0 {
-		result = responseAPI(todo, len(todo))
+		result = responseAPI(todo, "")
 	}
 
 	c.JSON(http.StatusOK, result)
 }
 
 // GetOneToDo controllers.
-func (strDB *StrDB) GetOneToDo(c *gin.Context) {
+func (controller *Controller) GetOneToDo(c *gin.Context) {
 	var (
 		todo       models.ToDo
 		resultCode = http.StatusOK
@@ -135,7 +136,7 @@ func (strDB *StrDB) GetOneToDo(c *gin.Context) {
 	)
 
 	id := c.Param("id")
-	err := strDB.DB.First(&todo, id).Error
+	err := controller.DB.DB.First(&todo, id).Error
 	if err != nil {
 		resultCode = http.StatusNotFound
 		result = gin.H{
@@ -145,7 +146,7 @@ func (strDB *StrDB) GetOneToDo(c *gin.Context) {
 	}
 
 	if resultCode == http.StatusOK {
-		result = responseAPI(todo, 1)
+		result = responseAPI(todo, "")
 	}
 
 	c.JSON(resultCode, result)
@@ -153,7 +154,7 @@ func (strDB *StrDB) GetOneToDo(c *gin.Context) {
 }
 
 // GetSearchToDo controllers.
-func (strDB *StrDB) GetSearchToDo(c *gin.Context) {
+func (controller *Controller) GetSearchToDo(c *gin.Context) {
 	var (
 		todo       []models.ToDo
 		resultCode = http.StatusOK
@@ -161,7 +162,7 @@ func (strDB *StrDB) GetSearchToDo(c *gin.Context) {
 	)
 
 	search := c.Query("search")
-	strDBQuery := strDB.DB
+	strDBQuery := controller.DB.DB
 
 	if search == "" {
 		resultCode = http.StatusBadRequest
@@ -183,9 +184,10 @@ func (strDB *StrDB) GetSearchToDo(c *gin.Context) {
 	}
 
 	if resultCode == http.StatusOK {
-		result = responseAPI(todo, len(todo))
+		result = responseAPI(todo, "")
 	}
 
 	c.JSON(resultCode, result)
 
 }
+*/
