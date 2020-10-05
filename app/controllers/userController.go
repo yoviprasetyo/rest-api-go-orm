@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"orm/app/helper"
 	"orm/app/models"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,8 +21,6 @@ func (controller *Controller) CreateUser(c *gin.Context) {
 			StatusCode: http.StatusOK,
 		}
 	)
-
-	controller.UseDB()
 
 	err := c.Bind(&user)
 	if err != nil {
@@ -52,170 +52,182 @@ func (controller *Controller) CreateUser(c *gin.Context) {
 	responseAPI(response)
 }
 
-/*
 // DeleteUser controller.
 func (controller *Controller) DeleteUser(c *gin.Context) {
 	var (
-		user       models.User
-		result     gin.H
-		resultCode int
+		user     models.User
+		response = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
 	)
 
 	id := c.Param("id")
-	err := controller.DB.DB.First(&user, id).Error
-	resultCode = http.StatusOK
-	result = gin.H{
-		"ok":      true,
-		"message": "Data deleted",
-	}
+	err := models.DB.First(&user, id).Error
+
 	if err != nil {
-		result = gin.H{
-			"ok":      false,
-			"message": "Data not found",
-		}
-		resultCode = http.StatusNotFound
+		response.ErrorMessage = err.Error()
+		response.StatusCode = http.StatusNotFound
+		responseAPI(response)
 	}
 
-	errDelete := controller.DB.DB.Delete(&user, id).Error
+	errDelete := models.DB.Delete(&user, id).Error
 	if errDelete != nil {
-		result = gin.H{
-			"ok":      false,
-			"message": errDelete.Error,
-		}
-		resultCode = http.StatusInternalServerError
+		response.ErrorMessage = err.Error()
+		response.StatusCode = http.StatusInternalServerError
+		responseAPI(response)
 	}
 
-	c.JSON(resultCode, result)
+	response.Data = user.MakeResponse()
+	responseAPI(response)
 }
 
 // UpdateUser controller.
 func (controller *Controller) UpdateUser(c *gin.Context) {
 
 	var (
-		user       models.User
-		newUser    models.User
-		result     gin.H
-		resultCode = http.StatusOK
+		user     models.User
+		newUser  models.User
+		response = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
 	)
-
-	result = gin.H{
-		"ok":      true,
-		"message": "Success update",
-	}
 
 	id := c.Param("id")
 	err := c.Bind(&newUser)
-	err = controller.DB.DB.First(&user, id).Error
+	err = models.DB.First(&user, id).Error
 	if err != nil {
-		result = gin.H{
-			"ok":      false,
-			"message": "Data not found",
-		}
-		resultCode = http.StatusNotFound
+		response.ErrorMessage = "Data not found"
+		response.StatusCode = http.StatusNotFound
+		responseAPI(response)
 	}
 
-	if resultCode != http.StatusNotFound {
-		errUpdate := controller.DB.DB.Model(&user).Updates(newUser).Error
-		if errUpdate != nil {
-			result = gin.H{
-				"ok":      false,
-				"message": errUpdate.Error,
-			}
-			resultCode = http.StatusInternalServerError
-		}
+	errUpdate := models.DB.Model(&user).Updates(newUser).Error
+	if errUpdate != nil {
+		response.ErrorMessage = errUpdate.Error()
+		response.StatusCode = http.StatusInternalServerError
+		responseAPI(response)
 	}
 
-	c.JSON(resultCode, result)
-}
+	response.Data = newUser.MakeResponse()
 
-// GetUser controllers.
-func (controller *Controller) GetUser(c *gin.Context) {
-	var (
-		user   []models.User
-		result gin.H
-	)
-
-	controller.DB.DB.Find(&user)
-
-	if len(user) <= 0 {
-		arrayNil := []models.User{}
-		result = gin.H{
-			"result": arrayNil,
-			"count":  0,
-		}
-	}
-
-	if len(user) > 0 {
-		result = responseAPI(user, "")
-	}
-
-	c.JSON(http.StatusOK, result)
+	responseAPI(response)
 }
 
 // GetOneUser controllers.
 func (controller *Controller) GetOneUser(c *gin.Context) {
 	var (
-		user       models.User
-		resultCode = http.StatusOK
-		result     gin.H
+		user     models.User
+		response = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+			Total:      1,
+		}
 	)
 
 	id := c.Param("id")
-	err := controller.DB.DB.First(&user, id).Error
+	err := models.DB.First(&user, id).Error
 	if err != nil {
-		resultCode = http.StatusNotFound
-		result = gin.H{
-			"ok":      false,
-			"message": "Data not found",
+		response.ErrorMessage = "Data Not Found"
+		response.StatusCode = http.StatusNotFound
+		responseAPI(response)
+	}
+
+	response.Data = user.MakeResponse()
+	responseAPI(response)
+}
+
+// GetUser controllers.
+func (controller *Controller) GetUser(c *gin.Context) {
+	var (
+		userResponse []gin.H
+		users        []models.User
+		response     = Response{
+			Context:       c,
+			StatusCode:    http.StatusOK,
+			ResponseURL:   ResponseURL{},
+			UsePagination: true,
+		}
+	)
+
+	relation := c.Query("relation")
+
+	page := c.DefaultQuery("page", "1")
+	perPage := c.DefaultQuery("per_page", "5")
+
+	perPageInt, _ := strconv.Atoi(perPage)
+	pageInt, _ := strconv.Atoi(page)
+
+	models.DB.Limit(perPageInt).Offset(((pageInt - 1) * perPageInt)).Find(&users)
+
+	for i := 0; i < len(users); i++ {
+		switch relation {
+		case "office":
+			userResponse = append(userResponse, users[i].MakeResponseWithOffice())
+		case "todo":
+			userResponse = append(userResponse, users[i].MakeResponseWithToDo())
+		default:
+			userResponse = append(userResponse, users[i].MakeResponse())
 		}
 	}
 
-	if resultCode == http.StatusOK {
-		result = responseAPI(user, "")
-	}
+	response.Data = userResponse
 
-	c.JSON(resultCode, result)
+	models.DB.Model(&models.User{}).Count(&response.Total)
+
+	response.Page = pageInt
+	response.PerPage = perPageInt
+
+	nextPageInt := pageInt + 1
+	prevPageInt := pageInt - 1
+
+	response.ResponseURL.SetCurrentPageURL("/users?page=" + page)
+
+	response.ResponseURL.SetFirstPageURL("/users?page=1")
+	response.ResponseURL.SetLastPageURL("/users?page=" + fmt.Sprint(getLastPage(response)))
+	response.ResponseURL.SetNextPageURL("/users?page=" + strconv.Itoa(nextPageInt))
+	response.ResponseURL.SetPrevPageURL("/users?page=" + strconv.Itoa(prevPageInt))
+
+	responseAPI(response)
 
 }
 
 // GetSearchUser controllers.
 func (controller *Controller) GetSearchUser(c *gin.Context) {
 	var (
-		user       []models.User
-		resultCode = http.StatusOK
-		result     gin.H
+		userResponse []gin.H
+		users        []models.ToDo
+		response     = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
 	)
 
 	search := c.Query("search")
-	strDBQuery := controller.DB.DB
 
 	if search == "" {
-		resultCode = http.StatusBadRequest
-		result = gin.H{
-			"ok":      false,
-			"message": "Search keyword is required",
-		}
+		response.StatusCode = http.StatusBadRequest
+		response.ErrorMessage = "Search query is required"
+		responseAPI(response)
 	}
 
-	if search != "" {
-		err := strDBQuery.Where("full_name LIKE ?", "%"+search+"%").Or("email LIKE ?", "%"+search+"%").Find(&user).Error
-		if err != nil {
-			resultCode = http.StatusNotFound
-			result = gin.H{
-				"ok":      false,
-				"message": err.Error,
-			}
-		}
+	err := models.DB.Where("full_name LIKE ?", "%"+search+"%").Or("email LIKE ?", "%"+search+"%").Find(&users).Error
+	if err != nil {
+		response.StatusCode = http.StatusInternalServerError
+		response.ErrorMessage = err.Error()
+		responseAPI(response)
 	}
 
-	if resultCode == http.StatusOK {
-		result = responseAPI(user, "")
+	for _, toDo := range users {
+		userResponse = append(userResponse, toDo.MakeResponse())
 	}
 
-	c.JSON(resultCode, result)
+	response.Data = userResponse
+	response.Total = int64(len(userResponse))
 
+	responseAPI(response)
 }
-*/
 
 // GetUserOffice controllers.
 func (controller *Controller) GetUserOffice(c *gin.Context) {
@@ -227,8 +239,6 @@ func (controller *Controller) GetUserOffice(c *gin.Context) {
 			StatusCode: http.StatusOK,
 		}
 	)
-
-	controller.UseDB()
 
 	OfficeID := c.Param("id")
 

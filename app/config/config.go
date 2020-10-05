@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"orm/app/helper"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -24,6 +25,8 @@ func Connect() *gorm.DB {
 	portDatabase = os.Getenv("PORT_DATABASE")
 	hostDatabase = os.Getenv("HOST_DATABASE")
 	nameDatabase = os.Getenv("NAME_DATABASE")
+
+	helper.AppURL = os.Getenv("APP_URL")
 
 	conn := userDatabase + ":" + passDatabase + "@tcp(" + hostDatabase + ":" + portDatabase + ")/" + nameDatabase + "?charset=utf8mb4&parseTime=True&loc=Local"
 

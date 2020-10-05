@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"orm/app/models"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,8 +21,6 @@ func (controller *Controller) CreateOffice(c *gin.Context) {
 		}
 	)
 
-	controller.UseDB()
-
 	err := c.Bind(&office)
 	if err != nil {
 		response.StatusCode = http.StatusInternalServerError
@@ -29,7 +28,6 @@ func (controller *Controller) CreateOffice(c *gin.Context) {
 		fmt.Println(err.Error())
 
 		responseAPI(response)
-		// return
 	}
 
 	errValidation := validateOffice(office)
@@ -38,85 +36,82 @@ func (controller *Controller) CreateOffice(c *gin.Context) {
 		response.ErrorMessage = errValidation.Error()
 		fmt.Println(errValidation.Error())
 		responseAPI(response)
-		// return
-	} else {
-		models.DB.Create(&office)
-
-		officeResponse = append(officeResponse, office.MakeResponse())
-
-		response.Data = officeResponse
-		responseAPI(response)
 	}
+
+	models.DB.Create(&office)
+
+	officeResponse = append(officeResponse, office.MakeResponse())
+
+	response.Data = officeResponse
+
+	responseAPI(response)
 
 }
 
-// // DeleteOffice controller.
-// func (controller *Controller) DeleteOffice(c *gin.Context) {
-// 	var (
-// 		office     models.Office
-// 		result     gin.H
-// 		resultCode int
-// 	)
+// DeleteOffice controller.
+func (controller *Controller) DeleteOffice(c *gin.Context) {
 
-// 	id := c.Param("id")
-// 	err := controller.DB.DB.First(&office, id).Error
-// 	resultCode = http.StatusOK
-// 	result = gin.H{
-// 		"ok":      true,
-// 		"message": "Data deleted",
-// 	}
-// 	if err != nil {
-// 		result = gin.H{
-// 			"ok":      false,
-// 			"message": "Data not found",
-// 		}
-// 		resultCode = http.StatusNotFound
-// 	}
+	var (
+		office   models.Office
+		response = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
+	)
 
-// 	errDelete := controller.DB.DB.Delete(&office, id).Error
-// 	if errDelete != nil {
-// 		result = responseAPI(nil, errDelete.Error())
-// 		resultCode = http.StatusInternalServerError
-// 	}
+	id := c.Param("id")
+	err := models.DB.First(&office, id).Error
 
-// 	c.JSON(resultCode, result)
-// }
+	if err != nil {
+		response.ErrorMessage = err.Error()
+		response.StatusCode = http.StatusNotFound
+		responseAPI(response)
+	}
 
-// // UpdateOffice controller.
-// func (controller *Controller) UpdateOffice(c *gin.Context) {
+	errDelete := models.DB.Delete(&office, id).Error
+	if errDelete != nil {
+		// result = responseAPI(nil, errDelete.Error())
+		response.ErrorMessage = err.Error()
+		response.StatusCode = http.StatusInternalServerError
+		responseAPI(response)
+	}
 
-// 	var (
-// 		office     models.Office
-// 		newOffice  models.Office
-// 		result     gin.H
-// 		resultCode = http.StatusOK
-// 	)
+	response.Data = office.MakeResponse()
+	responseAPI(response)
+}
 
-// 	result = gin.H{
-// 		"ok":      true,
-// 		"message": "Success update",
-// 	}
+// UpdateOffice controller.
+func (controller *Controller) UpdateOffice(c *gin.Context) {
 
-// 	result = responseAPI()
+	var (
+		office    models.Office
+		newOffice models.Office
+		response  = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
+	)
 
-// 	id := c.Param("id")
-// 	err := c.Bind(&newOffice)
-// 	err = controller.DB.DB.First(&office, id).Error
-// 	if err != nil {
-// 		result = responseAPI(nil, "Data not found")
-// 		resultCode = http.StatusNotFound
-// 	}
+	id := c.Param("id")
+	err := c.Bind(&newOffice)
+	err = models.DB.First(&office, id).Error
+	if err != nil {
+		response.ErrorMessage = "Data not found"
+		response.StatusCode = http.StatusNotFound
+		responseAPI(response)
+	}
 
-// 	if resultCode != http.StatusNotFound {
-// 		errUpdate := controller.DB.DB.Model(&office).Updates(newOffice).Error
-// 		if errUpdate != nil {
-// 			result = responseAPI(nil, errUpdate.Error())
-// 			resultCode = http.StatusInternalServerError
-// 		}
-// 	}
+	errUpdate := models.DB.Model(&office).Updates(newOffice).Error
+	if errUpdate != nil {
+		response.ErrorMessage = errUpdate.Error()
+		response.StatusCode = http.StatusInternalServerError
+		responseAPI(response)
+	}
 
-// 	c.JSON(resultCode, result)
-// }
+	response.Data = newOffice.MakeResponse()
+
+	responseAPI(response)
+}
 
 // GetOffice controllers.
 func (controller *Controller) GetOffice(c *gin.Context) {
@@ -124,16 +119,22 @@ func (controller *Controller) GetOffice(c *gin.Context) {
 		officeResponse []gin.H
 		offices        []models.Office
 		response       = Response{
-			Context:    c,
-			StatusCode: http.StatusOK,
+			Context:       c,
+			StatusCode:    http.StatusOK,
+			ResponseURL:   ResponseURL{},
+			UsePagination: true,
 		}
 	)
 
-	controller.UseDB()
-
 	relation := c.Query("relation")
 
-	models.DB.Find(&offices)
+	page := c.DefaultQuery("page", "1")
+	perPage := c.DefaultQuery("per_page", "5")
+
+	perPageInt, _ := strconv.Atoi(perPage)
+	pageInt, _ := strconv.Atoi(page)
+
+	models.DB.Limit(perPageInt).Offset(((pageInt - 1) * perPageInt)).Find(&offices)
 	for i := 0; i < len(offices); i++ {
 		switch relation {
 		case "user":
@@ -148,72 +149,82 @@ func (controller *Controller) GetOffice(c *gin.Context) {
 
 	response.Data = officeResponse
 
+	models.DB.Model(&models.Office{}).Count(&response.Total)
+
+	response.Page = pageInt
+	response.PerPage = perPageInt
+
+	nextPageInt := pageInt + 1
+	prevPageInt := pageInt - 1
+
+	response.ResponseURL.SetCurrentPageURL("/offices?page=" + page)
+
+	response.ResponseURL.SetFirstPageURL("/offices?page=1")
+	response.ResponseURL.SetLastPageURL("/offices?page=" + fmt.Sprint(getLastPage(response)))
+	response.ResponseURL.SetNextPageURL("/offices?page=" + strconv.Itoa(nextPageInt))
+	response.ResponseURL.SetPrevPageURL("/offices?page=" + strconv.Itoa(prevPageInt))
+
 	responseAPI(response)
 }
 
-// // GetOneOffice controllers.
-// func (controller *Controller) GetOneOffice(c *gin.Context) {
-// 	var (
-// 		office     models.Office
-// 		resultCode = http.StatusOK
-// 		result     gin.H
-// 	)
+// GetOneOffice controllers.
+func (controller *Controller) GetOneOffice(c *gin.Context) {
+	var (
+		office   models.Office
+		response = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+			Total:      1,
+		}
+	)
 
-// 	id := c.Param("id")
-// 	err := controller.DB.DB.First(&office, id).Error
-// 	if err != nil {
-// 		resultCode = http.StatusNotFound
-// 		result = gin.H{
-// 			"ok":      false,
-// 			"message": "Data not found",
-// 		}
-// 	}
+	id := c.Param("id")
+	err := models.DB.First(&office, id).Error
+	if err != nil {
+		response.ErrorMessage = "Data Not Found"
+		response.StatusCode = http.StatusNotFound
+		responseAPI(response)
+	}
 
-// 	if resultCode == http.StatusOK {
-// 		result = responseAPI(office, "")
-// 	}
+	response.Data = office.MakeResponse()
+	responseAPI(response)
+}
 
-// 	c.JSON(resultCode, result)
+// GetSearchOffice controllers.
+func (controller *Controller) GetSearchOffice(c *gin.Context) {
+	var (
+		officeResponse []gin.H
+		offices        []models.Office
+		response       = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
+	)
 
-// }
+	search := c.Query("search")
 
-// // GetSearchOffice controllers.
-// func (controller *Controller) GetSearchOffice(c *gin.Context) {
-// 	var (
-// 		office     []models.Office
-// 		resultCode = http.StatusOK
-// 		result     gin.H
-// 	)
+	if search == "" {
+		response.StatusCode = http.StatusBadRequest
+		response.ErrorMessage = "Search query is required"
+		responseAPI(response)
+	}
 
-// 	search := c.Query("search")
-// 	strDBQuery := controller.DB.DB
+	err := models.DB.Where("name LIKE ?", "%"+search+"%").Or("address LIKE ?", "%"+search+"%").Find(&offices).Error
+	if err != nil {
+		response.StatusCode = http.StatusInternalServerError
+		response.ErrorMessage = err.Error()
+		responseAPI(response)
+	}
 
-// 	if search == "" {
-// 		resultCode = http.StatusBadRequest
-// 		result = gin.H{
-// 			"ok":      false,
-// 			"message": "Search keyword is required",
-// 		}
-// 	}
+	for _, office := range offices {
+		officeResponse = append(officeResponse, office.MakeResponse())
+	}
 
-// 	if search != "" {
-// 		err := strDBQuery.Where("name LIKE ?", "%"+search+"%").Or("address LIKE ?", "%"+search+"%").Find(&office).Error
-// 		if err != nil {
-// 			resultCode = http.StatusNotFound
-// 			result = gin.H{
-// 				"ok":      false,
-// 				"message": err.Error,
-// 			}
-// 		}
-// 	}
+	response.Data = officeResponse
+	response.Total = int64(len(officeResponse))
 
-// 	if resultCode == http.StatusOK {
-// 		result = responseAPI(office, "")
-// 	}
-
-// 	c.JSON(resultCode, result)
-
-// }
+	responseAPI(response)
+}
 
 func validateOffice(office models.Office) error {
 	if office.Name == "" {
