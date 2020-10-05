@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"orm/app/models"
 
@@ -11,7 +11,7 @@ import (
 // CreateOffice controller.
 func (controller *Controller) CreateOffice(c *gin.Context) {
 	var (
-		officeResponse []models.OfficeResponse
+		officeResponse []gin.H
 		office         models.Office
 		response       = Response{
 			Context:    c,
@@ -19,17 +19,30 @@ func (controller *Controller) CreateOffice(c *gin.Context) {
 		}
 	)
 
+	controller.UseDB()
+
 	err := c.Bind(&office)
 	if err != nil {
-		fmt.Println("tidak ada data")
+		response.StatusCode = http.StatusInternalServerError
+		response.ErrorMessage = err.Error()
+
+		responseAPI(response)
+		return
 	}
 
-	controller.DB.DB.Create(&office)
+	errValidation := validateOffice(office)
+	if errValidation != nil {
+		response.StatusCode = http.StatusBadRequest
+		response.ErrorMessage = errValidation.Error()
+		responseAPI(response)
+		return
+	}
+
+	models.DB.Create(&office)
 
 	officeResponse = append(officeResponse, office.MakeResponse())
 
 	response.Data = officeResponse
-
 	responseAPI(response)
 }
 
@@ -101,29 +114,38 @@ func (controller *Controller) CreateOffice(c *gin.Context) {
 // 	c.JSON(resultCode, result)
 // }
 
-// // GetOffice controllers.
-// func (controller *Controller) GetOffice(c *gin.Context) {
-// 	var (
-// 		office []models.Office
-// 		result gin.H
-// 	)
+// GetOffice controllers.
+func (controller *Controller) GetOffice(c *gin.Context) {
+	var (
+		officeResponse []gin.H
+		offices        []models.Office
+		response       = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
+	)
 
-// 	controller.DB.DB.Find(&office)
+	controller.UseDB()
 
-// 	if len(office) <= 0 {
-// 		arrayNil := []models.Office{}
-// 		result = gin.H{
-// 			"result": arrayNil,
-// 			"count":  0,
-// 		}
-// 	}
+	relation := c.Query("relation")
 
-// 	if len(office) > 0 {
-// 		result = responseAPI(office, "")
-// 	}
+	models.DB.Find(&offices)
+	for i := 0; i < len(offices); i++ {
+		switch relation {
+		case "user":
+			officeResponse = append(officeResponse, offices[i].MakeResponseWithUser())
+		case "todo":
+			officeResponse = append(officeResponse, offices[i].MakeResponseWithToDo())
+		default:
+			officeResponse = append(officeResponse, offices[i].MakeResponse())
+		}
 
-// 	c.JSON(http.StatusOK, result)
-// }
+	}
+
+	response.Data = officeResponse
+
+	responseAPI(response)
+}
 
 // // GetOneOffice controllers.
 // func (controller *Controller) GetOneOffice(c *gin.Context) {
@@ -188,3 +210,15 @@ func (controller *Controller) CreateOffice(c *gin.Context) {
 // 	c.JSON(resultCode, result)
 
 // }
+
+func validateOffice(office models.Office) error {
+	if office.Name == "" {
+		return errors.New("Name is required")
+	}
+
+	if office.Address == "" {
+		return errors.New("Address is required")
+	}
+
+	return nil
+}

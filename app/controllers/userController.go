@@ -1,8 +1,7 @@
 package controllers
 
-/*
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"orm/app/helper"
 	"orm/app/models"
@@ -13,36 +12,47 @@ import (
 // CreateUser controller.
 func (controller *Controller) CreateUser(c *gin.Context) {
 	var (
-		user   models.User
-		result gin.H
+		userResponse []gin.H
+		user         models.User
+		response     = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
 	)
+
+	controller.UseDB()
 
 	err := c.Bind(&user)
 	if err != nil {
-		fmt.Println("tidak ada data")
+		response.StatusCode = http.StatusInternalServerError
+		response.ErrorMessage = err.Error()
+		responseAPI(response)
+	}
+
+	errValidation := validateUser(user)
+	if errValidation != nil {
+		response.StatusCode = http.StatusBadRequest
+		response.ErrorMessage = errValidation.Error()
+		responseAPI(response)
 	}
 
 	hashed, err := helper.HashPassword(user.Password)
 	if err != nil {
-		result = gin.H{
-			"status":  "error",
-			"message": err.Error,
-		}
-		c.JSON(http.StatusInternalServerError, result)
-		c.Abort()
+		response.StatusCode = http.StatusInternalServerError
+		response.ErrorMessage = err.Error()
+		responseAPI(response)
 	}
 
 	user.Password = hashed
 
-	controller.DB.DB.Create(&user)
-	controller.DB.DB.Joins("Office").First(&user, user.ID)
+	models.DB.Create(&user)
 
-	result = responseAPI(user, "")
-
-	c.JSON(http.StatusOK, result)
-
+	userResponse = append(userResponse, user.MakeResponseWithOffice())
+	response.Data = userResponse
+	responseAPI(response)
 }
 
+/*
 // DeleteUser controller.
 func (controller *Controller) DeleteUser(c *gin.Context) {
 	var (
@@ -206,3 +216,48 @@ func (controller *Controller) GetSearchUser(c *gin.Context) {
 
 }
 */
+
+// GetUserOffice controllers.
+func (controller *Controller) GetUserOffice(c *gin.Context) {
+	var (
+		userResponse []gin.H
+		users        []models.User
+		response     = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
+	)
+
+	controller.UseDB()
+
+	OfficeID := c.Param("id")
+
+	models.DB.Where("office_id = ?", OfficeID).Find(&users)
+	for i := 0; i < len(users); i++ {
+		userResponse = append(userResponse, users[i].MakeResponse())
+	}
+
+	response.Data = userResponse
+
+	responseAPI(response)
+}
+
+func validateUser(user models.User) error {
+	if user.FullName == "" {
+		return errors.New("Full Name is required")
+	}
+
+	if user.Password == "" {
+		return errors.New("Password is required")
+	}
+
+	if user.Email == "" {
+		return errors.New("Email is required")
+	}
+
+	if user.OfficeID == 0 {
+		return errors.New("Office ID is required")
+	}
+
+	return nil
+}

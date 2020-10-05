@@ -1,6 +1,8 @@
 package controllers
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 func responseAPI(response Response) {
 	var (
@@ -24,5 +26,6 @@ type Response struct {
 	Context      *gin.Context
 	StatusCode   int
 	Data         interface{}
+	Additional   interface{}
 	ErrorMessage string
 }

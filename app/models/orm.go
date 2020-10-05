@@ -1,15 +1,12 @@
 package models
 
-import (
-	"time"
+import "gorm.io/gorm"
 
-	"gorm.io/gorm"
-)
-
-// Model ORM.
-type Model struct {
-	ID        uint           `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+// Additional struct.
+type Additional struct {
+	Key     string
+	Content interface{}
 }
+
+// DB var.
+var DB *gorm.DB

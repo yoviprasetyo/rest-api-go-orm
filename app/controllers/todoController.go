@@ -1,8 +1,7 @@
 package controllers
 
-/*
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"orm/app/models"
 
@@ -12,22 +11,39 @@ import (
 // CreateToDo controller.
 func (controller *Controller) CreateToDo(c *gin.Context) {
 	var (
-		todo   models.ToDo
-		result gin.H
+		toDoResponse []gin.H
+		toDo         models.ToDo
+		response     = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
 	)
 
-	err := c.Bind(&todo)
+	controller.UseDB()
+
+	err := c.Bind(&toDo)
 	if err != nil {
-		fmt.Println("tidak ada data")
+		response.StatusCode = http.StatusInternalServerError
+		response.ErrorMessage = err.Error()
+		responseAPI(response)
+		return
 	}
 
-	controller.DB.DB.Create(&todo)
-	result = responseAPI(todo, "")
+	errValidation := validateToDo(toDo)
+	if errValidation != nil {
+		response.StatusCode = http.StatusBadRequest
+		response.ErrorMessage = errValidation.Error()
+		responseAPI(response)
+		return
+	}
 
-	c.JSON(http.StatusOK, result)
+	models.DB.Create(&toDo)
 
+	response.Data = append(toDoResponse, toDo.MakeResponse())
+	responseAPI(response)
 }
 
+/*
 // DeleteToDo controller.
 func (controller *Controller) DeleteToDo(c *gin.Context) {
 	var (
@@ -102,31 +118,65 @@ func (controller *Controller) UpdateToDo(c *gin.Context) {
 
 	c.JSON(resultCode, result)
 }
-
+*/
 // GetToDo controllers.
 func (controller *Controller) GetToDo(c *gin.Context) {
 	var (
-		todo   []models.ToDo
-		result gin.H
+		toDoResponse []gin.H
+		toDos        []models.ToDo
+		response     = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
 	)
 
-	controller.DB.DB.Find(&todo)
+	controller.UseDB()
 
-	if len(todo) <= 0 {
-		arrayNil := []models.ToDo{}
-		result = gin.H{
-			"result": arrayNil,
-			"count":  0,
+	models.DB.Find(&toDos)
+	for i := 0; i < len(toDos); i++ {
+		toDoResponse = append(toDoResponse, toDos[i].MakeResponseWithUser())
+	}
+
+	response.Data = toDoResponse
+
+	responseAPI(response)
+}
+
+// GetToDoUser controllers.
+func (controller *Controller) GetToDoUser(c *gin.Context) {
+	var (
+		toDoResponse []gin.H
+		toDos        []models.ToDo
+		response     = Response{
+			Context:    c,
+			StatusCode: http.StatusOK,
+		}
+	)
+
+	controller.UseDB()
+
+	userID := c.Param("id")
+	upper := c.Query("upper")
+
+	models.DB.Where("user_id = ?", userID).Find(&toDos)
+	for i := 0; i < len(toDos); i++ {
+
+		switch upper {
+		case "user":
+			toDoResponse = append(toDoResponse, toDos[i].MakeResponseWithUser())
+		case "office":
+			toDoResponse = append(toDoResponse, toDos[i].MakeResponseWithOffice())
+		default:
+			toDoResponse = append(toDoResponse, toDos[i].MakeResponse())
 		}
 	}
 
-	if len(todo) > 0 {
-		result = responseAPI(todo, "")
-	}
+	response.Data = toDoResponse
 
-	c.JSON(http.StatusOK, result)
+	responseAPI(response)
 }
 
+/*
 // GetOneToDo controllers.
 func (controller *Controller) GetOneToDo(c *gin.Context) {
 	var (
@@ -191,3 +241,19 @@ func (controller *Controller) GetSearchToDo(c *gin.Context) {
 
 }
 */
+
+func validateToDo(toDo models.ToDo) error {
+	if toDo.Name == "" {
+		return errors.New("Name is required")
+	}
+
+	if toDo.Description == "" {
+		return errors.New("Description is required")
+	}
+
+	if toDo.UserID == 0 {
+		return errors.New("User ID is required")
+	}
+
+	return nil
+}

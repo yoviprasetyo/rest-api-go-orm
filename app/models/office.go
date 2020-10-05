@@ -3,6 +3,7 @@ package models
 import (
 	"orm/app/helper"
 
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
@@ -13,20 +14,50 @@ type Office struct {
 	gorm.Model
 }
 
-// OfficeResponse struct.
-type OfficeResponse struct {
-	Name      string `json:"name"`
-	Address   string `json:"address"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+// MakeResponse of Office.
+func (office Office) MakeResponse() gin.H {
+
+	response := gin.H{
+		"id":         office.ID,
+		"name":       office.Name,
+		"address":    office.Address,
+		"created_at": office.CreatedAt.Format(helper.YMDHIS),
+		"updated_at": office.UpdatedAt.Format(helper.YMDHIS),
+	}
+
+	return response
 }
 
-// MakeResponse of Office.
-func (office Office) MakeResponse() OfficeResponse {
-	return OfficeResponse{
-		Name:      office.Name,
-		Address:   office.Address,
-		CreatedAt: office.CreatedAt.Format(helper.YMDHIS),
-		UpdatedAt: office.UpdatedAt.Format(helper.YMDHIS),
+// MakeResponseWithUser of Office.
+func (office Office) MakeResponseWithUser() gin.H {
+	var (
+		user User
+	)
+	response := gin.H{
+		"id":         office.ID,
+		"name":       office.Name,
+		"address":    office.Address,
+		"created_at": office.CreatedAt.Format(helper.YMDHIS),
+		"updated_at": office.UpdatedAt.Format(helper.YMDHIS),
+		"users":      user.GetByOfficeID(office.ID, false),
 	}
+
+	return response
+}
+
+// MakeResponseWithToDo of Office.
+func (office Office) MakeResponseWithToDo() gin.H {
+	var (
+		user User
+	)
+	response := gin.H{
+		"id":         office.ID,
+		"name":       office.Name,
+		"address":    office.Address,
+		"created_at": office.CreatedAt.Format(helper.YMDHIS),
+		"updated_at": office.UpdatedAt.Format(helper.YMDHIS),
+		"users":      user.GetByOfficeID(office.ID, true),
+	}
+
+	return response
 }
