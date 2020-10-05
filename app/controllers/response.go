@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func responseAPI(response Response) {
+func responseAPI(response Response) gin.H {
 	var (
 		result = gin.H{
 			"status": "success",
@@ -36,20 +36,25 @@ func responseAPI(response Response) {
 		}
 		response.Context.JSON(response.StatusCode, result)
 	}
+
+	return gin.H{
+		"status_code": response.StatusCode,
+		"result":      result,
+	}
 }
 
 // Response struct.
 type Response struct {
-	Context       *gin.Context
-	StatusCode    int
-	Data          interface{}
-	Total         int64
-	Page          int
-	PerPage       int
-	Additional    interface{}
-	ErrorMessage  string
-	ResponseURL   ResponseURL
-	UsePagination bool
+	Context       *gin.Context `json:"context"`
+	StatusCode    int          `json:"status_code"`
+	Data          interface{}  `json:"data"`
+	Total         int64        `json:"total"`
+	Page          int          `json:"page"`
+	PerPage       int          `json:"per_page"`
+	Additional    interface{}  `json:"additional"`
+	ErrorMessage  string       `json:"error_message"`
+	ResponseURL   ResponseURL  `json:"response_url"`
+	UsePagination bool         `json:"use_pagination"`
 }
 
 // ResponseURL struct.

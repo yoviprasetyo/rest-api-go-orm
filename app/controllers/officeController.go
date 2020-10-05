@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"orm/app/helper"
 	"orm/app/models"
 	"strconv"
 
@@ -113,6 +115,35 @@ func (controller *Controller) UpdateOffice(c *gin.Context) {
 	responseAPI(response)
 }
 
+// GetOfficeRedis method.
+func (controller *Controller) GetOfficeRedis(c *gin.Context) {
+	var (
+		response = Response{}
+	)
+
+	relation := c.Query("relation")
+	page := c.DefaultQuery("page", "1")
+	perPage := c.DefaultQuery("per_page", "5")
+	key := "office_" + page + "_" + perPage
+	if relation != "" {
+		key += "_" + relation
+	}
+
+	reply, err := helper.GetRedis(key)
+
+	fmt.Println(key, reply, err)
+
+	if err == nil {
+		err = json.Unmarshal(reply, &response)
+		if err == nil {
+			responseAPI(response)
+			return
+		}
+	}
+
+	controller.GetOffice(c)
+}
+
 // GetOffice controllers.
 func (controller *Controller) GetOffice(c *gin.Context) {
 	var (
@@ -147,7 +178,28 @@ func (controller *Controller) GetOffice(c *gin.Context) {
 
 	}
 
+	key := "office_" + page + "_" + perPage
+	if relation != "" {
+		key += "_" + relation
+	}
+
 	response.Data = officeResponse
+	jd, _ := json.Marshal(response)
+
+	reply, err := helper.RedisConn.Do("SET", key, string(jd))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	if err == nil {
+		fmt.Println("Reply", reply)
+	}
+	reply, err = helper.RedisConn.Do("EXPIRE", key, strconv.Itoa((30 * 60)))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	if err == nil {
+		fmt.Println("Reply", reply)
+	}
 
 	models.DB.Model(&models.Office{}).Count(&response.Total)
 

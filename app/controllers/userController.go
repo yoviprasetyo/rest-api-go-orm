@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -138,6 +139,35 @@ func (controller *Controller) GetOneUser(c *gin.Context) {
 	responseAPI(response)
 }
 
+// GetUserRedis method.
+func (controller *Controller) GetUserRedis(c *gin.Context) {
+	var (
+		response = Response{}
+	)
+
+	relation := c.Query("relation")
+	page := c.DefaultQuery("page", "1")
+	perPage := c.DefaultQuery("per_page", "5")
+	key := "user_" + page + "_" + perPage
+	if relation != "" {
+		key += "_" + relation
+	}
+
+	reply, err := helper.GetRedis(key)
+
+	fmt.Println(key, reply, err)
+
+	if err == nil {
+		err = json.Unmarshal(reply, &response)
+		if err == nil {
+			responseAPI(response)
+			return
+		}
+	}
+
+	controller.GetUser(c)
+}
+
 // GetUser controllers.
 func (controller *Controller) GetUser(c *gin.Context) {
 	var (
@@ -173,6 +203,28 @@ func (controller *Controller) GetUser(c *gin.Context) {
 	}
 
 	response.Data = userResponse
+
+	key := "user_" + page + "_" + perPage
+	if relation != "" {
+		key += "_" + relation
+	}
+
+	jd, _ := json.Marshal(response)
+
+	reply, err := helper.RedisConn.Do("SET", key, string(jd))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	if err == nil {
+		fmt.Println("Reply", reply)
+	}
+	reply, err = helper.RedisConn.Do("EXPIRE", key, strconv.Itoa((30 * 60)))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	if err == nil {
+		fmt.Println("Reply", reply)
+	}
 
 	models.DB.Model(&models.User{}).Count(&response.Total)
 

@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"orm/app/helper"
 	"orm/app/models"
 	"strconv"
 
@@ -106,6 +108,35 @@ func (controller *Controller) UpdateToDo(c *gin.Context) {
 	responseAPI(response)
 }
 
+// GetToDoRedis method.
+func (controller *Controller) GetToDoRedis(c *gin.Context) {
+	var (
+		response = Response{}
+	)
+
+	relation := c.Query("relation")
+	page := c.DefaultQuery("page", "1")
+	perPage := c.DefaultQuery("per_page", "5")
+	key := "todo_" + page + "_" + perPage
+	if relation != "" {
+		key += "_" + relation
+	}
+
+	reply, err := helper.GetRedis(key)
+
+	fmt.Println(key, reply, err)
+
+	if err == nil {
+		err = json.Unmarshal(reply, &response)
+		if err == nil {
+			responseAPI(response)
+			return
+		}
+	}
+
+	controller.GetToDo(c)
+}
+
 // GetToDo controllers.
 func (controller *Controller) GetToDo(c *gin.Context) {
 	var (
@@ -141,6 +172,28 @@ func (controller *Controller) GetToDo(c *gin.Context) {
 	}
 
 	response.Data = toDoResponse
+
+	key := "todo_" + page + "_" + perPage
+	if relation != "" {
+		key += "_" + relation
+	}
+
+	jd, _ := json.Marshal(response)
+
+	reply, err := helper.RedisConn.Do("SET", key, string(jd))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	if err == nil {
+		fmt.Println("Reply", reply)
+	}
+	reply, err = helper.RedisConn.Do("EXPIRE", key, strconv.Itoa((30 * 60)))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	if err == nil {
+		fmt.Println("Reply", reply)
+	}
 
 	models.DB.Model(&models.ToDo{}).Count(&response.Total)
 
