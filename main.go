@@ -2,6 +2,7 @@ package main
 
 import (
 	"orm/app/controllers"
+	"orm/app/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +14,7 @@ func main() {
 
 	router := gin.Default()
 
-	v1 := router.Group("/api/v1")
+	v1 := router.Group("/api/v1", middlewares.Auth)
 	{
 		{
 

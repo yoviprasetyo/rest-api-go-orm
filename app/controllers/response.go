@@ -13,12 +13,12 @@ func responseAPI(response Response) {
 	if response.ErrorMessage != "" {
 		result["status"] = "error"
 		result["message"] = response.ErrorMessage
-	}
-	if response.ErrorMessage == "" {
+		response.Context.JSON(response.StatusCode, result)
+		response.Context.Abort()
+	} else {
 		result["data"] = response.Data
+		response.Context.JSON(response.StatusCode, result)
 	}
-
-	response.Context.JSON(response.StatusCode, result)
 }
 
 // Response struct.

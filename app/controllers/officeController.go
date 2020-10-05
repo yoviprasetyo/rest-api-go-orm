@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"orm/app/models"
 
@@ -25,25 +26,28 @@ func (controller *Controller) CreateOffice(c *gin.Context) {
 	if err != nil {
 		response.StatusCode = http.StatusInternalServerError
 		response.ErrorMessage = err.Error()
+		fmt.Println(err.Error())
 
 		responseAPI(response)
-		return
+		// return
 	}
 
 	errValidation := validateOffice(office)
 	if errValidation != nil {
 		response.StatusCode = http.StatusBadRequest
 		response.ErrorMessage = errValidation.Error()
+		fmt.Println(errValidation.Error())
 		responseAPI(response)
-		return
+		// return
+	} else {
+		models.DB.Create(&office)
+
+		officeResponse = append(officeResponse, office.MakeResponse())
+
+		response.Data = officeResponse
+		responseAPI(response)
 	}
 
-	models.DB.Create(&office)
-
-	officeResponse = append(officeResponse, office.MakeResponse())
-
-	response.Data = officeResponse
-	responseAPI(response)
 }
 
 // // DeleteOffice controller.
