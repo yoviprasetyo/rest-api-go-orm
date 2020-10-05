@@ -29,13 +29,13 @@ func main() {
 			v1.PUT("/offices/:id", controller.UpdateOffice)
 		}
 		{
-			// 	v1.GET("/search/users", controller.GetSearchUser)
-			// 	v1.GET("/users", controller.GetUser)
-			// 	v1.GET("/users/:id/show", controller.GetOneUser)
+			v1.GET("/search/users", controller.GetSearchUser)
+			v1.GET("/users", controller.GetUser)
+			v1.GET("/users/:id/show", controller.GetOneUser)
 			v1.POST("/users", controller.CreateUser)
 			v1.GET("/users/:id/todos", controller.GetToDoUser)
-			// 	v1.DELETE("/users/:id", controller.DeleteUser)
-			// 	v1.PUT("/users/:id", controller.UpdateUser)
+			v1.DELETE("/users/:id", controller.DeleteUser)
+			v1.PUT("/users/:id", controller.UpdateUser)
 		}
 		{
 			v1.GET("/search/todos", controller.GetSearchToDo)
